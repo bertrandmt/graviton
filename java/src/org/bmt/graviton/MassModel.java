@@ -1,50 +1,68 @@
 /*
- * Particle.java
+ * Mass.java
  *
- * Created on 9 février 2002, 11:38
+ * Created on 9 fevrier 2002, 21:03
  */
-
 package org.bmt.graviton;
 
-import java.util.Set;
 import java.util.Iterator;
-import java.util.Map;
+import java.util.Set;
 
 /**
  *
  * @author  bmt
  * @version
  */
-public class TrueParticle
-extends
-ParticleModel
+public class MassModel
 {
+    double x;
+    double y;
+    
+    double vx;
+    double vy;
+    
+    double ax;
+    double ay;
+    
+    final double m;
+    final double r;
+    
     static final boolean repulse_on = false;
+
+    public static final double GRAVITATION_CONSTANT = 6.67259e-11;
+    public static final double REPULSOR_MASS = -2000;
     
-    public TrueParticle(double m, double r)
+    public MassModel(double m, double r)
     {
-        super(m, r);
+        this(m, r, 0, 0, 0, 0);
     }
     
-    public TrueParticle(double m, double r, double x, double y)
+    public MassModel(double m, double r, double x, double y)
     {
-        super(m, r, x, y);
+        this(m, r, x, y, 0, 0);
     }
     
-    public TrueParticle(double m, double r, double x, double y, double vx, double vy)
+    public MassModel(double m, double r, double x, double y, double vx, double vy)
     {
-        super(m, r, x, y, vx, vy);
+        this.m = m;
+        this.r = Math.max(r, 0.4/Space.SCALE);
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.ax = 0;
+        this.ay = 0;
     }
     
     static final double GRAV_ORDER = 2;
     static final double BOUNCE_ENERGY_GAIN = 0;
     
-    public void accelerate(Set particles)
+    public void accelerate(Set<MassModel> particles)
     {
         this.ax = this.ay = 0;
         for (Iterator i = particles.iterator(); i.hasNext();)
         {
-            ParticleModel p = (ParticleModel)i.next();
+            MassModel p = (MassModel)i.next();
             if (p==this) continue;
             
             double dx = p.x - this.x;
@@ -130,5 +148,24 @@ ParticleModel
             this.ax += mass_over_r_cube * delta_x;
             this.ay += mass_over_r_cube * delta_y;
         }
+    }
+    
+    public String toString()
+    {
+        StringBuffer b = new StringBuffer();
+        
+        b.append(this.x)
+         .append(",")
+         .append(this.y)
+         .append(",")
+         .append(this.vx)
+         .append(",")
+         .append(this.vy)
+         .append(",")
+         .append(this.ax)
+         .append(",")
+         .append(this.ay);
+        
+        return b.toString();
     }
 }

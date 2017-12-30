@@ -1,23 +1,14 @@
 /*
  * Space.java
  *
- * Created on 9 février 2002, 11:59
+ * Created on 9 fevrier 2002, 11:59
  */
 
 package org.bmt.graviton;
 
-import org.bmt.graviton.event.SpaceEvent;
-import org.bmt.graviton.event.SpaceListener;
-
 import java.util.Set;
 import java.util.HashSet;
-import java.util.TreeSet;
 import java.util.Iterator;
-import java.util.Collections;
-import java.util.Map;
-import java.util.HashMap;
-
-import javax.swing.event.EventListenerList;
 
 /**
  *
@@ -26,22 +17,22 @@ import javax.swing.event.EventListenerList;
  */
 public class SpaceModel// implements Runnable
 {
-    Set particles;
+    Set<MassModel> particles;
     double elapsed;
     
     /** Creates new Space */
     public SpaceModel()
     {
-        particles = new HashSet();
+        particles = new HashSet<MassModel>();
         elapsed = 0;
     }
     
-    public void addParticle(ParticleModel p)
+    public void addMass(MassModel p)
     {
         particles.add(p);
     }
     
-    public void removeParticle(ParticleModel p)
+    public void removeMass(MassModel p)
     {
         particles.remove(p);
     }
@@ -52,12 +43,12 @@ public class SpaceModel// implements Runnable
         
         for (Iterator i = particles.iterator();i.hasNext();)
         {
-            ((ParticleModel)i.next()).accelerate(particles);
+            ((MassModel)i.next()).accelerate(particles);
         }
         
         for (Iterator i = particles.iterator();i.hasNext();)
         {
-            ((ParticleModel)i.next()).step(dt, width, height);
+            ((MassModel)i.next()).step(dt, width, height);
         }
     }
     

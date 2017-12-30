@@ -1,16 +1,13 @@
 /*
  * Window.java
  *
- * Created on 9 février 2002, 11:22
+ * Created on 9 fevrier 2002, 11:22
  */
 
 package org.bmt.graviton;
 
-import org.bmt.graviton.JGraviton;
-import org.bmt.graviton.Particle;
+import org.bmt.graviton.Mass;
 import org.bmt.graviton.SpaceModel;
-import org.bmt.graviton.event.SpaceEvent;
-import org.bmt.graviton.event.SpaceListener;
 
 import java.io.PrintWriter;
 import java.io.FileOutputStream;
@@ -18,18 +15,14 @@ import java.io.FileOutputStream;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
-import java.util.LinkedList;
-import java.util.Collections;
 
-import java.awt.*;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
+import java.awt.Color;
+import java.awt.Container;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.awt.image.VolatileImage;
-import java.awt.geom.AffineTransform;
-import java.awt.geom.Area;
-import javax.swing.*;
 
 /**
  *
@@ -45,8 +38,8 @@ Runnable
     static final Color BG_COLOR = Color.black;
     
     SpaceModel model;
-    Set particles;
-    Particle pov;
+    Set<Mass> particles;
+    Mass pov;
     
     PrintWriter log;
     
@@ -63,7 +56,7 @@ Runnable
     {
         super();
         this.model = model;
-        particles = new HashSet();
+        particles = new HashSet<Mass>();
     }
     
     public SpaceModel getModel()
@@ -71,13 +64,13 @@ Runnable
         return model;
     }
     
-    public void addParticle(Particle p)
+    public void addMass(Mass p)
     {
         particles.add(p);
-        model.addParticle(p.model);
+        model.addMass(p.model);
     }
 
-    public void setPoV(Particle p)
+    public void setPoV(Mass p)
     {
         if (!particles.contains(p)) throw new IllegalArgumentException("The particle does not belong to this space");
         pov = p;
@@ -133,8 +126,8 @@ Runnable
             
             for (Iterator i = particles.iterator(); i.hasNext(); )
             {
-                Particle p = (Particle)i.next();
-                ParticleModel pm = p.model;
+                Mass p = (Mass)i.next();
+                MassModel pm = p.model;
                 p.render(g2d);
             }
             
@@ -150,7 +143,7 @@ Runnable
             Graphics2D g2d = vi.createGraphics();
             g2d.scale(SCALE,SCALE);
             g2d.translate(320/SCALE-pov.model.x, 240/SCALE-pov.model.y);
-            //for (Iterator i = particles.iterator(); i.hasNext(); ) ((Particle)i.next()).clear(g2d);
+            //for (Iterator i = particles.iterator(); i.hasNext(); ) ((Mass)i.next()).clear(g2d);
             g2d.dispose();
         }
         while (vi.contentsLost());
