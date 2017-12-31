@@ -52,7 +52,7 @@ public class Mass
     public Mass(MassModel model, double radius, Color c)
     {
         this.model = model;
-        this.radius = Math.max(radius, 0.4/Space.SCALE);
+        this.radius = Math.max(radius, 0.4/JGraviton.SCALE);
         this.c = c;
     }
 

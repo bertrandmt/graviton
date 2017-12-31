@@ -36,8 +36,12 @@ import java.util.*;
 import java.util.Random;
 
 import java.awt.Color;
-import java.awt.Toolkit;
+import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.Toolkit;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseMotionListener;
@@ -45,6 +49,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.image.VolatileImage;
 
 import javax.swing.JFrame;
 
@@ -55,10 +60,66 @@ import javax.swing.JFrame;
  */
 public class JGraviton
 {
-    Space space;
-    JFrame w;
+    class SpaceContainer extends Container {
+        VolatileImage vi;
 
-    /** Creates new JGraviton */
+        void renderOffscreen(boolean do_clear) {
+            do {
+                if (vi.validate(getGraphicsConfiguration()) == VolatileImage.IMAGE_INCOMPATIBLE) {
+                    vi = createVolatileImage(getWidth(), getHeight());
+                    do_clear = true;
+                }
+
+                Graphics2D g2d = vi.createGraphics();
+
+                if (do_clear) {
+                    g2d.setColor(Color.black);
+                    g2d.fillRect(0, 0, getWidth(), getHeight());
+                }
+
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2d.scale(SCALE,SCALE);
+                g2d.translate(getWidth()/(2*SCALE), getHeight()/(2*SCALE));
+
+                space.render(g2d);
+
+                g2d.dispose();
+            } while (vi.contentsLost());
+        }
+
+        public void paint(Graphics g)
+        {
+            if (vi == null) {
+                vi = createVolatileImage(getWidth(), getHeight());
+            }
+       
+            do {
+                int returnCode = vi.validate(getGraphicsConfiguration());
+                if (returnCode == VolatileImage.IMAGE_RESTORED) {
+                    // Contents need to be restored
+                    renderOffscreen(true);      // restore contents
+                } else if (returnCode == VolatileImage.IMAGE_INCOMPATIBLE) {
+                    // old vi doesn't work with new GraphicsConfig; re-create it
+                    vi = createVolatileImage(getWidth(), getHeight());
+                    renderOffscreen(true);
+                }
+                g.drawImage(vi, 0, 0, this);
+            } while (vi.contentsLost());
+        }
+    };
+ 
+     Space space;
+    JFrame w;
+    SpaceContainer spaceContainer;
+
+    boolean do_forward = true;
+    double iterations_per_step = 200;
+    double step_dt = 1000;
+    Thread runner = null;
+
+    static final double SCALE=1e-13*300;
+
+   /** Creates new JGraviton */
     public JGraviton()
     throws
     Exception
@@ -170,23 +231,61 @@ public class JGraviton
         w.addKeyListener(new KeyAdapter() {
             public void keyPressed(KeyEvent evt)
             {
+                System.out.println(evt);
                 switch(evt.getKeyCode()) {
-                    case 'D': space.nextPOV(); break;
-                    case 'A': space.prevPOV(); break;
+                    case 'D': space.nextPOV(); spaceContainer.renderOffscreen(true); break;
+                    case 'A': space.prevPOV(); spaceContainer.renderOffscreen(true); break;
+                    case 39: stop(); step(); break;
+                    case 32: if (runner == null) start(); else stop(); break;
                 }
             }
         });
-        w.setContentPane(space);
+        spaceContainer = new SpaceContainer();
+        w.setContentPane(spaceContainer);
         w.setVisible(true);
 
-        space.start();
+        start();
+    }
+
+    public void step() {
+        for (int i = 0; i < iterations_per_step; i++) {
+            space.model.step(do_forward ? step_dt : -step_dt);
+        }
+        space.log.println(space.model.toString());
+        spaceContainer.renderOffscreen(false);
+        spaceContainer.repaint();
     }
 
     public void shutdown()
     {
-        space.stop();
+        stop();
+        space.log.close();
         w.dispose();
         System.exit(0);
+    }
+
+    public void start() {
+        if (runner != null) {
+            stop();
+        }
+        runner = new Thread(new Runnable() {
+            public void run() {
+                while(true) {
+                    if (Thread.currentThread() != runner) {
+                        break;
+                    }
+        
+                    step();
+                }
+            }
+        });
+        runner.start();
+    }
+
+    public void stop() {
+        if (runner != null) {
+            runner = null;
+        }
     }
 
     public static void main(String[] args)
