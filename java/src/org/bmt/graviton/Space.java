@@ -35,54 +35,81 @@ Container
 implements
 Runnable
 {
-    static final Color BG_COLOR = Color.black;
-    
     SpaceModel model;
     Set<Mass> particles;
+    Iterator<Mass> povIterator;
     Mass pov;
-    
+
     PrintWriter log;
-    
-    /** Creates new Window */
+
+    boolean do_clear;
+
     public Space()
     throws
         Exception
     {
         this(new SpaceModel());
-        log = new PrintWriter(new FileOutputStream("jgraviton.log"));
     }
-    
+
     public Space(final SpaceModel model)
+    throws
+        Exception
     {
         super();
         this.model = model;
         particles = new HashSet<Mass>();
-    }
-    
-    public SpaceModel getModel()
-    {
-        return model;
-    }
-    
-    public void addMass(Mass p)
-    {
-        particles.add(p);
-        model.addMass(p.model);
+        povIterator = particles.iterator();
+        pov = null;
+        log = new PrintWriter(new FileOutputStream("jgraviton.log"));
+        do_clear = true;
     }
 
-    public void setPoV(Mass p)
+    public void add(Mass p)
     {
-        if (!particles.contains(p)) throw new IllegalArgumentException("The particle does not belong to this space");
-        pov = p;
+        particles.add(p);
+        povIterator = particles.iterator();
+        pov = povIterator.next();
+        model.add(p.model);
     }
-            
-    BufferedImage bi;
+
+    public boolean remove(Mass p) {
+        boolean removed = particles.remove(p);
+        if (removed) {
+            povIterator = particles.iterator();
+            if (povIterator.hasNext()) {
+                pov = povIterator.next();
+            }
+            boolean inner_removed = model.remove(p.model);
+            assert inner_removed : "Model does not contain particle that space contains";
+        }
+        return removed;
+    }
+
+    public void nextPOV() {
+        if (povIterator.hasNext()) {
+            pov = povIterator.next();
+        }
+        else {
+            povIterator = particles.iterator();
+            if (povIterator.hasNext()) {
+                pov = povIterator.next();
+            }
+            else pov = null;
+        }
+        do_clear = true;;
+    }
+
+    public void prevPOV() {
+        /* don't have a backwards iterator in this case */
+        do_clear = true;
+    }
+
     VolatileImage vi;
-    
+
     public void paint(Graphics g)
     {
         render(this.getWidth(), this.getHeight());
-        
+
         do
         {
             int returnCode = vi.validate(getGraphicsConfiguration());
@@ -92,65 +119,63 @@ Runnable
             }
             g.drawImage(vi, 0, 0, null);
         } while (vi.contentsLost());
-        
-        clear(this.getWidth(), this.getHeight());
+
+        if (do_clear) do_clear = false;
     }
-    
+
     static final double SCALE=1e-13*300;
-    
+
+    private Graphics2D getG2D() {
+        Graphics2D g2d;
+
+        if ((vi == null) || (vi.validate(getGraphicsConfiguration()) == VolatileImage.IMAGE_INCOMPATIBLE))
+        {
+            vi = this.createVolatileImage(this.getWidth(), this.getHeight());
+            g2d = vi.createGraphics();
+            g2d.setColor(Color.black);
+            g2d.fillRect(0, 0, getWidth(), getHeight());
+        }
+        else
+        {
+            g2d = vi.createGraphics();
+        }
+
+        return g2d;
+    }
+
     public void render(int width, int height)
     {
-        Graphics2D g2d;
-            
-        double dt = 10000;
-        for (int i=0;i<100;i++) model.step(dt, width, height);
-        log.println(model.toString());
-        
-        do
-        {
-            if ((vi == null) || (vi.validate(getGraphicsConfiguration()) == VolatileImage.IMAGE_INCOMPATIBLE))
-            {
-                vi = this.createVolatileImage(this.getWidth(), this.getHeight());
-                g2d = vi.createGraphics();
-                g2d.setBackground(BG_COLOR);
-                g2d.clearRect(0, 0, width, height);
-            }
-            else
-            {
-                g2d = vi.createGraphics();
-            }
-            
+        if (do_clear) {
+            clear();
+        }
+        else {
+            Graphics2D g2d = getG2D();
+
             g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2d.scale(SCALE,SCALE);
-            g2d.translate(320/SCALE-pov.model.x, 240/SCALE-pov.model.y);
-            
-            for (Iterator i = particles.iterator(); i.hasNext(); )
-            {
-                Mass p = (Mass)i.next();
-                MassModel pm = p.model;
-                p.render(g2d);
+            if (pov != null) {
+                g2d.translate(width/(2*SCALE)-pov.model.pos.x, height/(2*SCALE)-pov.model.pos.y);
             }
-            
+            else {
+                g2d.translate(width/(2*SCALE), height/(2*SCALE));
+            }
+
+            particles.forEach(p -> p.render(g2d));
+
             g2d.dispose();
         }
-        while (vi.contentsLost());
     }
-    
-    public void clear(int width, int height)
-    {
-        if (!vi.contentsLost() && (vi != null) && (vi.validate(getGraphicsConfiguration()) != VolatileImage.IMAGE_INCOMPATIBLE))
-        {
-            Graphics2D g2d = vi.createGraphics();
-            g2d.scale(SCALE,SCALE);
-            g2d.translate(320/SCALE-pov.model.x, 240/SCALE-pov.model.y);
-            //for (Iterator i = particles.iterator(); i.hasNext(); ) ((Mass)i.next()).clear(g2d);
-            g2d.dispose();
-        }
-        while (vi.contentsLost());
+
+    private void clear() {
+        Graphics2D g2d = getG2D();
+
+        g2d.setColor(Color.black);
+        g2d.fillRect(0, 0, getWidth(), getHeight());
+        g2d.dispose();
     }
-    
+
     Thread runner = null;
-    
+
     public void start()
     {
         if (runner != null)
@@ -158,19 +183,19 @@ Runnable
             stop();
         }
         runner = new Thread(this, "Space modelizer");
-        //runner.setPriority(runner.getPriority());
         runner.start();
     }
-    
+
     public void stop()
     {
         if (runner != null)
         {
             log.close();
             runner.interrupt();
+            runner = null;
         }
     }
-    
+
     public void run()
     {
         while(true)
@@ -179,13 +204,11 @@ Runnable
             {
                 break;
             }
-            /*try
-            {
-                Thread.currentThread().sleep(1000/100);
-            }
-            catch (InterruptedException e)
-            {
-            }*/
+
+            double dt = 1000;
+            for (int i=0;i<200;i++) model.step(dt);
+            log.println(model.toString());
+
             repaint();
         }
     }
