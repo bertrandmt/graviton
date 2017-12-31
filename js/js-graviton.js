@@ -55,10 +55,6 @@ function Vector(x, y) {
         return new Vector(this.x * scalar, this.y * scalar);
     }
 
-    this.div = function(scalar) {
-        return new Vector(this.x / scalar, this.y / scalar);
-    }
-
     this.add = function(other) {
         this.x += other.x;
         this.y += other.y;
@@ -88,7 +84,7 @@ function MassModel(mass, pos, v) {
             var r2 = d.magnitude_sq();
 
             var a_magnitude = G * other.mass / r2;
-            var local_a = d.mul(a_magnitude / d.magnitude());
+            var local_a = d.set_magnitude(a_magnitude);
 
             a.add(local_a);
         });
@@ -96,11 +92,11 @@ function MassModel(mass, pos, v) {
         this.a = a;
     };
 
-    this.absorb = function(p) {
-        var mass_ratio = p.mass / (p.mass + this.mass);
-        this.v.add(p.v.sub(this.v).mul(mass_ratio));
-        this.pos.add(p.pos.sub(this.pos).mul(mass_ratio));
-        this.mass += p.mass;
+    this.absorb = function(other) {
+        var mass_ratio = other.mass / (other.mass + this.mass);
+        this.v.add(other.v.sub(this.v).mul(mass_ratio));
+        this.pos.add(other.pos.sub(this.pos).mul(mass_ratio));
+        this.mass += other.mass;
     }
 
     this.step = function(dt) {
@@ -116,20 +112,6 @@ function MassModel(mass, pos, v) {
                ", a: "+this.a.toString() +
                " }";
     };
-
-    this.rateOfChange = function(other, dt) {
-        var current_distance = this.pos.sub(other.pos).magnitude();
-
-        var this_p = new Vector(this.pos.x, this.pos.y);
-        this_p.add(this.v.mul(dt));
-
-        var other_p = new Vector(other.pos.x, other.pos.y);
-        other_p.add(other.v.mul(dt));
-
-        var next_distance = this_p.sub(other_p).magnitude();
-
-        return Math.abs(next_distance - current_distance) / current_distance;
-    }
 }
 
 function Mass(name, model, color) {
@@ -182,12 +164,14 @@ function SpaceModel() {
         this.elapsed += dt;
 
         var particles = this.particles;
-        this.particles.forEach(function(p) { p.accelerate(particles); });
-        this.particles.forEach(function(p) { p.step(dt); });
+        particles.forEach(function(p) { p.accelerate(particles); });
+        particles.forEach(function(p) { p.step(dt); });
     }
 
     this.collide = function(p, into) {
+        if (-1 == this.particles.indexOf(p) || -1 == this.particles.indexOf(into)) return false;
         into.absorb(p);
+        return true;
     }
 
     this.barycenter = function() {
@@ -198,7 +182,7 @@ function SpaceModel() {
             bpos.add(p.pos.mul(p.mass));
             bv.add(p.v.mul(p.mass));
         })
-        return { pos: bpos.div(this.total_mass), v: bv.div(this.total_mass) };
+        return { pos: bpos.mul(1/this.total_mass), v: bv.mul(1/this.total_mass) };
     }
 
     this.recenter = function() {
@@ -356,8 +340,8 @@ function main() {
             case 'j': iterations_per_step /= 1.1; break;
             case 'i': step_dt *= 1.1; break;
             case 'k': step_dt /= 1.1; break;
-            case 'd': space.nextPOV(); space.clear(); break;
-            case 'a': space.prevPOV(); space.clear(); break;
+            case 'd': space.nextPOV(); break;
+            case 'a': space.prevPOV(); break;
             case ' ': if (do_stop) start(); else stop(); break;
             case 'ArrowRight': stop(); step(true); break;
             case 'ArrowLeft': stop(); step(false); break;
