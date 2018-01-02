@@ -117,6 +117,52 @@ public class SpaceModel
         });
     }
 
+    static final double DOT_LO_THRESHOLD = 0.99994; /* ~= arccos(11/1000) */
+    static final double DOT_HI_THRESHOLD = 0.99996; /* ~= arccos( 9/1000) */
+
+    public double nextStepDt(double step_dt) {
+        double next_step_dt = step_dt;
+        double min_dot;
+
+        /* by angle change: using 0.995 (as cos(1/10)) as the threshold), aiming for 1/10th of a rad */
+        do {
+            min_dot = 1.1; /* stricly > 1 */
+            for (MassModel p : particles) {
+                for (MassModel other : particles) {
+                    if (other == p) break;
+
+                    Vector cur_d = other.pos.sub(p.pos);
+                    
+                    Vector p_nextPos = new Vector(p.pos);
+                    p_nextPos.add(p.v.mul(next_step_dt));
+
+                    Vector other_nextPos = new Vector(other.pos);
+                    other_nextPos.add(other.v.mul(next_step_dt));
+
+                    Vector next_d = other_nextPos.sub(p_nextPos);
+
+                    double dot = next_d.dot(cur_d);
+                    if (dot < min_dot) {
+                        min_dot = dot;
+                    }
+                }
+            }
+            if (min_dot < DOT_LO_THRESHOLD) {
+                next_step_dt /= 1.1;
+                System.out.println("LO => next_step_dt = " + next_step_dt);
+            } else if (min_dot > DOT_HI_THRESHOLD) {
+                next_step_dt *= 1.1;
+                System.out.println("HI => next_step_dt = " + next_step_dt);
+            }
+        } while (min_dot < DOT_LO_THRESHOLD || min_dot > DOT_HI_THRESHOLD);
+
+        if (next_step_dt != step_dt) {
+            System.out.println("step_dt " + step_dt + " => " + next_step_dt);
+        }
+
+        return next_step_dt;
+    }
+
     public String toString()
     {
         StringBuffer b = new StringBuffer();

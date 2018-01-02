@@ -39,12 +39,21 @@ public class Vector {
         this.y = y;
     }
 
+    public Vector(Vector other) {
+        this.x = other.x;
+        this.y = other.y;
+    }
+
     double magnitude() {
         return Math.sqrt(x*x + y*y);
     }
 
     double magnitude_sq() {
         return x*x + y*y;
+    }
+
+    double dot(Vector other) {
+        return (this.x * other.x + this.y * other.y) / (this.magnitude() * other.magnitude());
     }
 
     Vector mul(double scalar) {

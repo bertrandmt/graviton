@@ -47,19 +47,20 @@ public class Mass
     final MassModel model;
 
     final double radius;
-    final Color c;
+    final Color color;
 
-    public Mass(MassModel model, double radius, Color c)
+    public Mass(MassModel model, double radius, Color color)
     {
         this.model = model;
-        this.radius = Math.max(radius, 0.4/JGraviton.SCALE);
-        this.c = c;
+        this.radius = radius;
+        this.color = color;
     }
 
     public void render(Graphics2D g2d)
     {
-        Ellipse2D shape = new Ellipse2D.Double(model.pos.x - this.radius, model.pos.y - this.radius, 2*this.radius, 2*this.radius);
-        g2d.setColor(c);
+        double radius = Math.max(this.radius, 1/JGraviton.SCALE);
+        Ellipse2D shape = new Ellipse2D.Double(model.pos.x - radius, model.pos.y - radius, 2*radius, 2*radius);
+        g2d.setColor(color);
         g2d.fill(shape);
     }
 }

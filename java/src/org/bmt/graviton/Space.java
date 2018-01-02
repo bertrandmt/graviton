@@ -35,9 +35,6 @@ package org.bmt.graviton;
 import org.bmt.graviton.Mass;
 import org.bmt.graviton.SpaceModel;
 
-import java.io.PrintWriter;
-import java.io.FileOutputStream;
-
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -57,29 +54,14 @@ public class Space
     Iterator<Mass> povIterator;
     Mass pov;
 
-    PrintWriter log;
-
-    public Space()
-    throws
-        Exception
-    {
-        this(new SpaceModel());
-    }
-
-    public Space(final SpaceModel model)
-    throws
-        Exception
-    {
-        super();
+    public Space(final SpaceModel model) {
         this.model = model;
         particles = new HashSet<Mass>();
         povIterator = particles.iterator();
         pov = null;
-        log = new PrintWriter(new FileOutputStream("jgraviton.log"));
     }
 
-    public void add(Mass p)
-    {
+    public void add(Mass p) {
         particles.add(p);
         povIterator = particles.iterator();
         pov = povIterator.next();
