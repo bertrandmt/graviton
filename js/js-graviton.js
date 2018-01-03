@@ -101,19 +101,18 @@ function MassModel(mass, pos, v) {
 
     this.accelerate = function(particles) {
         var a = new Vector(0, 0);
-        var self = this;
 
-        particles.forEach(function(other) {
-            if (other === self) return;
+        for (var other of particles) {
+            if (other === this) continue;
 
-            var d = other.pos.sub(self.pos);
+            var d = other.pos.sub(this.pos);
             var r2 = d.magnitude_sq();
 
             var a_magnitude = G * other.mass / r2;
             var local_a = d.set_magnitude(a_magnitude);
 
             a.add(local_a);
-        });
+        }
 
         this.a = a;
     };
@@ -189,9 +188,13 @@ function SpaceModel() {
     this.step = function(dt) {
         this.elapsed += dt;
 
-        var particles = this.particles;
-        particles.forEach(function(p) { p.accelerate(particles); });
-        particles.forEach(function(p) { p.step(dt); });
+        for (var p of this.particles) {
+            p.accelerate(this.particles);
+        }
+
+        for (var p of this.particles) {
+            p.step(dt);
+        }
     }
 
     this.collide = function(p, into) {
@@ -204,26 +207,28 @@ function SpaceModel() {
         var bpos = new Vector(0, 0);
         var bv = new Vector(0, 0);
 
-        this.particles.forEach(function(p) {
+        for (var p of this.particles) {
             bpos.add(p.pos.mul(p.mass));
             bv.add(p.v.mul(p.mass));
-        })
+        }
         return { pos: bpos.mul(1/this.total_mass), v: bv.mul(1/this.total_mass) };
     }
 
     this.recenter = function() {
         var b = this.barycenter();
-        this.particles.forEach(function(p) { 
+        for (var p of this.particles) {
             p.pos = p.pos.sub(b.pos);
             p.v = p.v.sub(b.v);
-        });
+        }
     }
 
     this.toString = function() {
         var str = "{ elapsed = "+this.elapsed;
         if (do_verbose) {
             str += ", ";
-            this.particles.forEach(function(p) { str += p.toString()+", " });
+            for (var p of this.particles) {
+                str += p.toString()+", ";
+            }
         }
         str += " }";
         return str;
@@ -275,8 +280,9 @@ function Space(model, ctx) {
     }
 
     this.render = function(do_bright) {
-        var self = this;
-        this.particles.forEach(function(p) { p.render(self.pov(), do_bright); });
+        for (var p of this.particles) {
+            p.render(this.pov(), do_bright);
+        }
     }
 
     this.clear = function() {
@@ -302,20 +308,18 @@ function Space(model, ctx) {
     }
 
     this.interesting_particles = function() {
-        var self = this;
-
         var most_accel = undefined;
         var min_d = -1;
         var closest_1 = undefined;
         var closest_2 = undefined;
 
-        this.particles.forEach(function(p) {
+        for (var p of this.particles) {
             if (most_accel === undefined || p.model.a.magnitude_sq() > most_accel.model.a.magnitude_sq()) {
                 most_accel = p;
             }
 
-            self.particles.forEach(function(other) {
-                if (other === p) return;
+            for (var other of this.particles) {
+                if (other === p) break;
 
                 var d = other.model.pos.sub(p.model.pos).magnitude_sq();
                 if (-1 == min_d || d < min_d) {
@@ -323,10 +327,13 @@ function Space(model, ctx) {
                     closest_1 = p;
                     closest_2 = other;
                 }
-            });
-        });
+            }
+        }
 
-        return { most_accel: { p: most_accel, a: most_accel.model.a.magnitude() }, closest: { d: Math.sqrt(min_d), p1: closest_1, p2: closest_2 } };
+        return {
+            most_accel: { p: most_accel, a: most_accel.model.a.magnitude() },
+            closest: { d: Math.sqrt(min_d), p1: closest_1, p2: closest_2 }
+        };
     }
 
     this.collide = function(p, into) {
