@@ -54,6 +54,8 @@ import javax.swing.JFrame;
  */
 public class JGraviton
 {
+    Object threadMonitor;
+
     class SpaceContainer extends Container {
         VolatileImage vi;
         boolean do_clear;
@@ -114,21 +116,29 @@ public class JGraviton
             } while (vi.contentsLost());
 
             do_clear = false;
+
+            synchronized(threadMonitor) {
+                threadMonitor.notify();
+            }
         }
     };
  
+    Thread runner = null;
+
     Space space;
     JFrame w;
     SpaceContainer spaceContainer;
     PrintWriter log;
 
+    double iterations_per_step = 1;
     double step_dt = 1000;
-    Thread runner = null;
 
     static double SCALE=1e-9;
 
    /** Creates new JGraviton */
     public JGraviton() throws Exception {
+        threadMonitor = new Object();
+
         log = new PrintWriter(new FileOutputStream("jgraviton.log"));
 
         space = new Space(new SpaceModel());
@@ -240,6 +250,8 @@ public class JGraviton
                     case 'A': space.prevPOV(); spaceContainer.clear(); spaceContainer.repaint(); break;
                     case 'W': SCALE *= 1.1; spaceContainer.clear(); spaceContainer.repaint(); break;
                     case 'S': SCALE /= 1.1; spaceContainer.clear(); spaceContainer.repaint(); break;
+                    case 'U': iterations_per_step *= 1.1; break;
+                    case 'J': iterations_per_step /= 1.1; break;
                     case 'I': step_dt *= 1.1; break;
                     case 'K': step_dt /= 1.1; break;
                     case 32: if (runner == null) start(); else stop(); break;
@@ -252,9 +264,11 @@ public class JGraviton
     }
 
     public void step(boolean do_forward) {
-        space.model.step(do_forward ? step_dt : -step_dt);
+        for (int i = 0; i < iterations_per_step; i++) {
+            space.model.step(do_forward ? step_dt : -step_dt);
 
-        step_dt = space.model.nextStepDt(step_dt);
+            step_dt = space.model.nextStepDt(step_dt);
+        }
 
         //log.println(space.model.toString());
 
@@ -281,6 +295,13 @@ public class JGraviton
                     }
         
                     step(true);
+
+                    synchronized(threadMonitor) {
+                        try {
+                            threadMonitor.wait();
+                        } catch (InterruptedException e) {
+                        }
+                    }
                 }
             }
         });
@@ -290,6 +311,9 @@ public class JGraviton
     public void stop() {
         if (runner != null) {
             runner = null;
+            synchronized(threadMonitor) {
+                threadMonitor.notify();
+            }
         }
     }
 
