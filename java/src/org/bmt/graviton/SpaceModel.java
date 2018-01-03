@@ -124,18 +124,24 @@ public class SpaceModel
     static final double DOT_LO_THRESHOLD = 0.99994; /* ~= arccos(11/1000) */
     static final double DOT_HI_THRESHOLD = 0.99996; /* ~= arccos( 9/1000) */
 
+    static final double ROC_HI_THRESHOLD = 0.0012;
+    static final double ROC_LO_THRESHOLD = 0.0008;
+
     public double nextStepDt(double step_dt) {
         double next_step_dt = step_dt;
         double min_dot;
+        double max_roc;
+        boolean done = false;
 
-        /* by angle change: using 0.995 (as cos(1/10)) as the threshold), aiming for 1/10th of a rad */
         do {
             min_dot = 1.1; /* stricly > 1 */
+            max_roc = 0;
             for (MassModel p : particles) {
                 for (MassModel other : particles) {
                     if (other == p) break;
 
                     Vector cur_d = other.pos.sub(p.pos);
+                    double cur_d_mag = cur_d.magnitude();
                     
                     Vector p_nextPos = new Vector(p.pos);
                     p_nextPos.add(p.v.mul(next_step_dt));
@@ -144,24 +150,32 @@ public class SpaceModel
                     other_nextPos.add(other.v.mul(next_step_dt));
 
                     Vector next_d = other_nextPos.sub(p_nextPos);
+                    double next_d_mag = next_d.magnitude();
 
                     double dot = next_d.dot(cur_d);
                     if (dot < min_dot) {
                         min_dot = dot;
                     }
+
+                    double roc = Math.abs(next_d_mag - cur_d_mag) / cur_d_mag;
+                    if (roc > max_roc) {
+                        max_roc = roc;
+                    }
                 }
             }
-            if (min_dot < DOT_LO_THRESHOLD) {
+            if (min_dot < DOT_LO_THRESHOLD || max_roc > ROC_HI_THRESHOLD) { /* too fast! */
                 next_step_dt /= 1.1;
-                System.out.println("LO => next_step_dt = " + next_step_dt);
-            } else if (min_dot > DOT_HI_THRESHOLD) {
+                System.out.format("DOT %.6f LO || ROC %.5f HI => next_step_dt = %.0f (-10%%)\n", min_dot, max_roc, next_step_dt);
+            } else if (min_dot > DOT_HI_THRESHOLD && max_roc < ROC_LO_THRESHOLD) { /* too slow! */
                 next_step_dt *= 1.1;
-                System.out.println("HI => next_step_dt = " + next_step_dt);
+                System.out.format("DOT %.6f HI && ROC %.5f LO => next_step_dt = %.0f (+10%%)\n", min_dot, max_roc, next_step_dt);
+            } else {
+                done = true;
             }
-        } while (min_dot < DOT_LO_THRESHOLD || min_dot > DOT_HI_THRESHOLD);
+        } while (!done);
 
         if (next_step_dt != step_dt) {
-            System.out.println("step_dt " + step_dt + " => " + next_step_dt);
+            System.out.format("step_dt %.0f => %.0f\n", step_dt, next_step_dt);
         }
 
         return next_step_dt;

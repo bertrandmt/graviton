@@ -130,7 +130,7 @@ public class JGraviton
     SpaceContainer spaceContainer;
     PrintWriter log;
 
-    double iterations_per_step = 1;
+    double iterations_per_step = 100;
     double step_dt = 1000;
 
     static double SCALE=1e-9;
