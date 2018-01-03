@@ -103,6 +103,8 @@ public class Space
             g2d.translate(-pov.model.pos.x, -pov.model.pos.y);
         }
 
-        particles.forEach(p -> p.render(g2d));
+        for (Mass p : particles) {
+            p.render(g2d);
+        }
     }
 }

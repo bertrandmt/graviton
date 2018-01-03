@@ -70,18 +70,17 @@ public class MassModel
     public void accelerate(Set<MassModel> particles)
     {
         Vector a = new Vector();
-        MassModel self = this;
 
-        particles.forEach(other -> {
-            if (other==self) return;
+        for (MassModel other : particles) {
+            if (other==this) continue;
 
-            Vector d = other.pos.sub(self.pos);
+            Vector d = other.pos.sub(this.pos);
             double r2 = d.magnitude_sq();
             double a_magnitude = GRAVITATION_CONSTANT * other.mass / r2;
             Vector a_local = d.setMagnitude(a_magnitude);
 
             a.add(a_local);
-        });
+        }
 
         this.a = a;
     }

@@ -82,8 +82,12 @@ public class SpaceModel
     {
         elapsed += dt;
 
-        particles.forEach(p -> p.accelerate(particles));
-        particles.forEach(p -> p.step(dt));
+        for (MassModel p : particles) {
+            p.accelerate(particles);
+        }
+        for (MassModel p : particles) {
+            p.step(dt);
+        }
     }
 
     public boolean collide(MassModel p, MassModel into) {
@@ -96,10 +100,10 @@ public class SpaceModel
     public MassModel barycenter() {
         barycenter = new MassModel(totalMass);
 
-        particles.forEach(p -> {
+        for (MassModel p : particles) {
             barycenter.pos.add(p.pos.mul(p.mass));
             barycenter.v.add(p.v.mul(p.mass));
-        });
+        }
 
         barycenter.pos = barycenter.pos.mul(1/totalMass);
         barycenter.v = barycenter.v.mul(1/totalMass);
@@ -111,10 +115,10 @@ public class SpaceModel
         /* recompute barycenter */
         barycenter();
 
-        particles.forEach(p -> {
+        for (MassModel p : particles) {
             p.pos = p.pos.sub(barycenter.pos);
             p.v = p.v.sub(barycenter.v);
-        });
+        }
     }
 
     static final double DOT_LO_THRESHOLD = 0.99994; /* ~= arccos(11/1000) */
